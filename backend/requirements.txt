@@ -1,0 +1,48 @@
+# AFTERLIGHT Backend Dependencies
+# Install: pip install -r requirements.txt
+
+# ─── Web Framework ─────────────────────────────────────────────────────────────
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+python-multipart==0.0.12
+
+# ─── Database ──────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.36
+aiosqlite==0.20.0
+alembic==1.14.0
+
+# ─── Config ────────────────────────────────────────────────────────────────────
+pydantic-settings==2.6.1
+python-dotenv==1.0.1
+
+# ─── HTTP Client (Ollama) ──────────────────────────────────────────────────────
+httpx==0.28.1
+
+# ─── Local Transcription (real Whisper, no API) ───────────────────────────────
+faster-whisper==1.1.0
+
+# ─── OCR ───────────────────────────────────────────────────────────────────────
+pytesseract==0.3.13
+Pillow==11.0.0
+
+# ─── Video / Frame Extraction ─────────────────────────────────────────────────
+opencv-python-headless==4.10.0.84
+
+# ─── Vector Store & Embeddings ────────────────────────────────────────────────
+chromadb==0.5.23
+sentence-transformers==3.3.1
+
+# ─── Adapter Fine-Tuning (Gemma 4 E2B IT via HuggingFace) ────────────────────
+# NOTE: bitsandbytes requires CUDA. CPU-only training is very slow.
+torch>=2.1.0
+transformers>=4.47.0
+peft>=0.14.0
+trl>=0.12.0
+bitsandbytes>=0.45.0
+accelerate>=1.2.0
+datasets>=3.2.0
+
+# ─── Utilities ─────────────────────────────────────────────────────────────────
+numpy==1.26.4
+python-jose==3.3.0
+aiofiles==24.1.0
