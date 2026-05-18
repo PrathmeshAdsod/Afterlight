@@ -1,304 +1,241 @@
 # ✦ Afterlight — Complete Setup Guide
 # RTX 5050 Laptop GPU (Blackwell sm_120) + Ollama + Gemma 4
 
-> Follow this guide **top to bottom, once**. Everything is GPU-accelerated.
-> Your system: Python 3.12 ✅ | RTX 5050 8GB ✅ | Ollama installed ✅
+> **Current Status** — read this first before following any steps below.
 
 ---
 
-## System Overview
+## ✅ What Is Already Done (No Action Needed)
 
-| Component | Your Setup | Notes |
+These steps were completed during the initial session. **Skip them entirely.**
+
+| Step | Status | Detail |
 |---|---|---|
-| **Python** | 3.12.11 ✅ | Already installed |
-| **Node.js** | Need to verify | For Next.js frontend |
-| **Ollama** | Installed ✅ | Need to pull `gemma4:e2b` |
-| **GPU** | RTX 5050 8GB (sm_120) ✅ | Blackwell — needs PyTorch nightly |
-| **PyTorch** | Install (nightly cu128) | Only nightly supports sm_120 |
-| **FFmpeg** | Install | For audio/video processing |
-| **Tesseract** | Install | For OCR on photos/documents |
+| **Python 3.12 venv created** | ✅ Done | `backend/venv/` |
+| **PyTorch Nightly cu128 installed** | ✅ Done | `2.12.0.dev+cu128` — Blackwell sm_120 confirmed |
+| **CUDA verified** | ✅ Done | `torch.cuda.is_available()=True`, GPU=RTX 5050, 8.0GB |
+| **Gemma 4 E2B pulled** | ✅ Done | `gemma4:e2b` Q4_K_M, 7.2GB, in `~/.ollama/models/` |
+| **Ollama connected** | ✅ Done | `/api/health` returns `ollama.connected: true` |
+| **FFmpeg installed** | ✅ Done | v8.1.1, in PATH |
+| **faster-whisper installed** | ✅ Done | v1.2.1, GPU float16 mode |
+| **chromadb + sentence-transformers** | ✅ Done | v1.5.9 / v5.5.0 |
+| **OpenCV installed** | ✅ Done | v4.13.0 |
+| **transformers + peft + trl + bitsandbytes** | ✅ Done | For QLoRA training |
+| **accelerate + datasets installed** | ✅ Done | Training dependencies |
+| **Backend API running** | ✅ Done | `http://localhost:8000` |
+| **Frontend running** | ✅ Done | `http://localhost:3000` |
+| **Whisper model set to `small`** | ✅ Done | 0.24GB VRAM, fast latency |
+| **Voice conversation (STT+TTS)** | ✅ Done | Mic button + Web Speech API built in |
+| **ElevenLabs key UI** | ✅ Done | Settings page — enter/remove key from UI |
+| **Git initialized + first commit** | ✅ Done|  2 commits, clean working tree |
 
 ---
 
-## Step 1 — Pull Gemma 4 E2B via Ollama
+## ⬜ Still TODO — Manual Steps Required
 
-```bash
-ollama pull gemma4:e2b
-```
-
-> Downloads ~7.2 GB. Q4_K_M quantization — runs fully on your GPU VRAM.
-> This will take ~15-20 min on a typical connection.
-
-Verify when done:
-```bash
-ollama list
-# Should show: gemma4:e2b
-```
-
-Test it's working on GPU:
-```bash
-ollama run gemma4:e2b "Say hello in one sentence."
-```
-In `nvidia-smi` during this, GPU memory usage should jump to ~3-4 GB.
+Work through these **in order**.
 
 ---
 
-## Step 2 — FFmpeg (audio/video processing)
+### Step 1 — Install Tesseract OCR (for photo/document processing)
 
-1. Download: https://www.gyan.dev/ffmpeg/builds/ → **ffmpeg-release-essentials.zip**
-2. Extract to `C:\ffmpeg`
-3. Add `C:\ffmpeg\bin` to Windows PATH:
-   - Search "Environment Variables" → System Variables → `Path` → Edit → New → `C:\ffmpeg\bin`
-4. Open **new** terminal, verify:
-```bash
-ffmpeg -version
-ffprobe -version
+Currently showing `tesseract: available: false` in `/api/health`.
+
+1. Download: https://github.com/UB-Mannheim/tesseract/wiki → `tesseract-ocr-w64-setup-5.5.0.exe`
+2. Run installer — default path `C:\Program Files\Tesseract-OCR\`
+3. During install, tick **Hindi** language pack if needed
+4. Add `C:\Program Files\Tesseract-OCR\` to **System PATH**:
+   - Search "Environment Variables" → System Variables → `Path` → Edit → New → paste path
+5. Restart the backend terminal and verify:
+
+```powershell
+cd C:\Users\prath\OneDrive\Desktop\Afterlight\backend
+venv\Scripts\activate
+python -c "import pytesseract; print(pytesseract.get_tesseract_version())"
 ```
 
----
-
-## Step 3 — Tesseract OCR (photos, documents, screenshots)
-
-1. Download installer: https://github.com/UB-Mannheim/tesseract/wiki
-   - Get: `tesseract-ocr-w64-setup-5.5.0.exe` (64-bit)
-2. Run installer
-   - During install, expand **Additional language data** → select **Hindi** if needed
-   - Install path: `C:\Program Files\Tesseract-OCR\` (default)
-3. Add to PATH: `C:\Program Files\Tesseract-OCR\`
-4. Verify:
-```bash
-tesseract --version
-```
-
-If it's NOT in PATH, set it in `.env` instead:
+If not in PATH, set it in `.env` instead:
 ```env
 TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
 ```
 
 ---
 
-## Step 4 — Backend Python Environment
+### Step 2 — HuggingFace Login (for QLoRA training only)
 
-The project uses a **Python 3.12 venv** inside `backend/`. All packages go here — isolated from system Python.
+Only needed when you run adapter training. Not needed for inference/demo.
 
-### 4a. Create the venv (already done if you see `backend/venv/`)
-```bash
+```powershell
 cd C:\Users\prath\OneDrive\Desktop\Afterlight\backend
-py -3.12 -m venv venv
-```
-
-### 4b. Activate it
-```bash
 venv\Scripts\activate
-# Prompt will show: (venv)
-```
-
-### 4c. Install PyTorch Nightly (CUDA 12.8 — required for RTX 5050 Blackwell sm_120)
-
-> ⚠️ **IMPORTANT**: The RTX 5050 Laptop is Blackwell architecture (compute capability sm_120).
-> PyTorch 2.6 stable only supports up to sm_90 (Ada). You MUST use the nightly build.
-
-```bash
-pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
-```
-
-Verify CUDA is working:
-```bash
-python -c "import torch; print(torch.__version__, torch.cuda.get_device_name(0))"
-# Expected: 2.12.0.dev... NVIDIA GeForce RTX 5050 Laptop GPU
-# NO warnings about sm_120 incompatibility
-```
-
-### 4d. Install core server packages
-```bash
-pip install fastapi "uvicorn[standard]" python-multipart "sqlalchemy>=2.0.40" aiosqlite pydantic-settings python-dotenv httpx aiofiles "Pillow>=11.0.0" pytesseract
-```
-
-### 4e. Install ML packages (RAG, transcription, embeddings)
-```bash
-# Vector search + embeddings (will auto-use GPU)
-pip install chromadb sentence-transformers
-
-# Audio/video transcription (GPU-accelerated via float16)
-pip install faster-whisper
-
-# Video frame extraction
-pip install opencv-python-headless
-
-# HuggingFace access
-pip install huggingface_hub
-```
-
-### 4f. Install QLoRA training packages
-```bash
-pip install "transformers>=4.51.0" "peft>=0.15.0" "trl>=0.17.0" "accelerate>=1.6.0" datasets "bitsandbytes>=0.45.5"
-```
-
-### 4g. Login to HuggingFace (needed for Gemma 4 base model download during training)
-```bash
 huggingface-cli login
 # Paste your HF token from: https://huggingface.co/settings/tokens
 ```
-Also go to https://huggingface.co/google/gemma-4-e2b-it and click **"Agree and access repository"** if you haven't already.
+
+Then go to https://huggingface.co/google/gemma-4-e2b-it → click **"Agree and access repository"**.
 
 ---
 
-## Step 5 — Configure .env
+### Step 3 — Create Your Demo Memory Space
 
-The `.env` file is already pre-configured in `backend/.env` for your GPU. Key settings:
+1. Open http://localhost:3000/create
+2. Fill in your fictional persona details:
+   - **Name**: e.g., `Nani`
+   - **Relationship**: e.g., `Grandmother`
+   - **Birth year**: e.g., `1942`
+   - **Passed year**: e.g., `2023`
+   - **Language**: `Hindi, English`
+   - **Description**: Short paragraph about them
+3. Submit → Accept the stewardship agreement
+4. **Save the space URL** — it contains your `SPACE_ID`
 
-```env
-OLLAMA_MODEL=gemma4:e2b        # Q4_K_M quantization via Ollama
-WHISPER_DEVICE=cuda            # GPU transcription
-WHISPER_MODEL=medium           # Good quality, fits in VRAM
-WHISPER_COMPUTE_TYPE=float16   # GPU compute type for Blackwell
-TRAIN_LORA_RANK=16             # LoRA rank for QLoRA
-TRAIN_MAX_LENGTH=512           # Token length (fits in 8GB)
+---
+
+### Step 4 — Upload Your Media
+
+Upload your own real audio, video, photos, and text files via the **Capture Studio** page (`/spaces/SPACE_ID/capture`), or via API:
+
+```powershell
+# In a new terminal (backend venv not needed for curl):
+# Upload text
+Invoke-RestMethod -Uri "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/assets" -Method POST -InFile "your_story.txt" -ContentType "multipart/form-data"
+
+# Or use the Capture Studio UI — drag and drop files
 ```
 
-Only change these if needed:
-```env
-# If Tesseract is NOT in PATH:
-TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+Supported: `.mp3`, `.mp4`, `.wav`, `.jpg`, `.png`, `.pdf`, `.txt`, `.docx`
+
+---
+
+### Step 5 — Process the Uploaded Media
+
+Trigger Gemma 4 extraction (runs locally via Ollama):
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/process" -Method POST
+```
+
+Watch the Setup page (`/spaces/SPACE_ID/setup`) — each pipeline step turns green as it completes. Gemma 4 reads every transcript and photo and extracts memory cards.
+
+**This is where real AI runs** — watch the backend terminal, you'll see Ollama generating.
+
+---
+
+### Step 6 — Review and Approve Memories
+
+Go to `/spaces/SPACE_ID/review` — approve the memories Gemma 4 extracted. Only approved memories are used in conversation.
+
+---
+
+### Step 7 — Generate Training Data
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/generate-training-data" -Method POST
+```
+
+This creates `backend/storage/training/YOUR_SPACE_ID/training_data.jsonl` — the dataset for QLoRA fine-tuning, generated by Gemma 4.
+
+---
+
+### Step 8 — Run QLoRA Adapter Training (do the night before demo)
+
+**Option A — via API:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/train-adapter" -Method POST
+```
+
+**Option B — run script directly (more control):**
+```powershell
+cd C:\Users\prath\OneDrive\Desktop\Afterlight\backend
+venv\Scripts\activate
+python scripts/train_persona_adapter.py `
+  --space_id YOUR_SPACE_ID `
+  --dataset_path storage/training/YOUR_SPACE_ID/training_data.jsonl `
+  --output_dir storage/adapters/YOUR_SPACE_ID `
+  --model_id google/gemma-4-e2b-it `
+  --lora_rank 16 `
+  --batch_size 1 `
+  --grad_accum 4 `
+  --epochs 3
+```
+
+Training on RTX 5050 with ~60 examples ≈ **15–30 minutes**.
+When done, Setup page shows **"Adapter Ready ✓"**.
+
+---
+
+### Step 9 — (Optional) ElevenLabs Voice Clone
+
+For the persona to respond in their **real cloned voice**:
+
+1. Sign up at https://elevenlabs.io (free — 10,000 chars/month)
+2. Go to `/spaces/SPACE_ID/settings`
+3. Enter your API key in the **Voice Mode** section → Save
+4. Call the clone-voice endpoint with their audio asset IDs:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/clone-voice" `
+  -Method POST -ContentType "application/json" `
+  -Body '{"name":"Nani","audio_asset_ids":["ASSET_ID_1","ASSET_ID_2"]}'
+```
+
+5. Paste the returned `voice_id` back into Settings
+
+Without this step, voice replies use browser Web Speech Synthesis (free, built-in Chrome).
+
+---
+
+### Step 10 — Push to GitHub
+
+```powershell
+cd C:\Users\prath\OneDrive\Desktop\Afterlight
+git remote add origin https://github.com/YOUR_USERNAME/afterlight
+git push -u origin master
+```
+
+Make sure the repo is **public** — hackathon judges need to access it.
+
+---
+
+### Step 11 — Pre-Demo Verification
+
+Run this health check right before recording:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:8000/api/health" | ConvertTo-Json -Depth 5
+```
+
+**You want to see:**
+```json
+{
+  "ollama": { "connected": true, "model_available": true },
+  "tools": {
+    "ffmpeg": { "available": true },
+    "tesseract": { "available": true },
+    "faster_whisper": { "available": true },
+    "opencv": { "available": true }
+  }
+}
 ```
 
 ---
 
-## Step 6 — Frontend Setup
+## Running the App
 
-```bash
-cd C:\Users\prath\OneDrive\Desktop\Afterlight\frontend
-npm install
-```
-
-Verify the API URL (already set correctly in the project):
-```bash
-# Check frontend/.env.local exists, or create it:
-echo NEXT_PUBLIC_API_URL=http://localhost:8000 > .env.local
-```
-
----
-
-## Step 7 — Starting the Servers
-
-**Use the one-click scripts in the project root:**
-
-### Backend — double-click `start_backend.bat` or run:
-```bash
+### Start backend:
+```powershell
 cd C:\Users\prath\OneDrive\Desktop\Afterlight
 start_backend.bat
 ```
 
-### Frontend — double-click `start_frontend.bat` or run:
-```bash
+### Start frontend:
+```powershell
 cd C:\Users\prath\OneDrive\Desktop\Afterlight
 start_frontend.bat
 ```
 
-Or manually:
-```bash
-# Terminal 1 — Backend
-cd backend
-venv\Scripts\activate
-python -m uvicorn app.main:app --reload --port 8000 --host 0.0.0.0
-
-# Terminal 2 — Frontend
-cd frontend
-npm run dev
-```
-
----
-
-## Step 8 — Verify Everything
-
-### Health check (most important):
-Open: http://localhost:8000/api/health
-
-You want to see:
-```json
-{
-  "ollama": { "connected": true, "model": "gemma4:e2b" },
-  "tools": {
-    "ffmpeg": { "available": true },
-    "tesseract": { "available": true },
-    "faster_whisper": { "available": true }
-  },
-  "vector_store": { "available": true }
-}
-```
-
-### GPU sanity check:
-```bash
-cd backend
-venv\Scripts\activate
-python -c "import torch; print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'NONE')"
-```
-
-### Full stack:
-- Frontend: http://localhost:3000
-- API Docs: http://localhost:8000/docs
-
----
-
-## Step 9 — Before the Demo: Run the Full Pipeline
-
-**Do this the day before recording.**
-
-### 9a. Create a Memory Space
-1. Go to http://localhost:3000/create
-2. Fill in the persona details (your fictional person)
-3. Submit — note the space ID from the URL
-
-### 9b. Upload your media
-Upload your own audio, video, photos, text files via the Capture Studio page, or use the API:
-```bash
-# Upload a text file
-curl -X POST "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/assets" \
-  -F "file=@your_story.txt"
-
-# Upload an audio/video file
-curl -X POST "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/assets" \
-  -F "file=@voice_recording.mp3"
-```
-
-### 9c. Trigger processing (Gemma 4 extracts memories)
-```bash
-curl -X POST "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/process"
-```
-
-Watch the backend terminal — Gemma 4 is running live on your GPU via Ollama.
-
-### 9d. Generate training data
-```bash
-curl -X POST "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/generate-training-data"
-```
-
-### 9e. Run QLoRA adapter training (do this the night before demo)
-```bash
-# Get the job ID from the API response, then:
-curl -X POST "http://localhost:8000/api/memory-spaces/YOUR_SPACE_ID/train-adapter"
-```
-
-Or run the script directly:
-```bash
-cd backend
-venv\Scripts\activate
-python scripts/train_persona_adapter.py \
-  --space_id YOUR_SPACE_ID \
-  --dataset_path storage/training/YOUR_SPACE_ID/training_data.jsonl \
-  --output_dir storage/adapters/YOUR_SPACE_ID \
-  --model_id google/gemma-4-e2b-it \
-  --lora_rank 16 \
-  --batch_size 1 \
-  --grad_accum 4 \
-  --epochs 3
-```
-
-Training on RTX 5050 with ~60 examples takes approximately **15-30 minutes**.
-
-### 9f. Talk with the presence
-Go to http://localhost:3000/spaces/YOUR_SPACE_ID/talk and start a conversation.
-The first response uses Ollama (Gemma 4 Q4_K_M). After training, the adapter can be loaded too.
+- **Frontend**: http://localhost:3000
+- **API + docs**: http://localhost:8000/docs
 
 ---
 
@@ -306,35 +243,43 @@ The first response uses Ollama (Gemma 4 Q4_K_M). After training, the adapter can
 
 | Symptom | Fix |
 |---|---|
-| `sm_120 not compatible` warning in PyTorch | Re-install with nightly: `pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cu128` |
-| `ollama.connected: false` in health | Start Ollama: click system tray icon or run `ollama serve` |
-| `gemma4:e2b not found` | Run `ollama pull gemma4:e2b` (7.2 GB download) |
-| Talk page: "Ollama not connected" | Same — ensure Ollama is running |
-| Vector search not working | `pip install chromadb sentence-transformers` and restart backend |
-| Audio not transcribing | `pip install faster-whisper`, restart backend |
-| `bitsandbytes` errors during training | Update: `pip install bitsandbytes>=0.45.5` |
-| Training OOM (out of memory) | Reduce `TRAIN_MAX_LENGTH` to 256 in `.env` |
-| `CUDA not available` during training | Wrong torch build — use nightly cu128 (see Step 4c) |
-| `venv\Scripts\activate` not found | Run Step 4a to create the venv first |
-| Frontend blank / JS error | Check `npm install` completed in `frontend/` |
+| `sm_120 not compatible` warning | Re-install PyTorch nightly: `pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cu128` |
+| `ollama.connected: false` | Start Ollama from system tray or run `ollama serve` |
+| `gemma4:e2b not found` | Run `ollama pull gemma4:e2b` again |
+| `tesseract: available: false` | Install Tesseract and add to PATH (Step 1 above) |
+| Mic not working in browser | Must use Chrome or Edge (Firefox doesn't support Web Speech API) |
+| Voice not speaking responses | Click 🔊 Voice toggle in Talk page header |
+| `CUDA not available` during training | Wrong torch build — reinstall nightly cu128 |
+| Training OOM | Edit `.env` → reduce `TRAIN_MAX_LENGTH` to `128` |
+| `huggingface-cli login` error | Get token from https://huggingface.co/settings/tokens |
+| Frontend blank page | Run `npm install` in `frontend/` then `npm run dev` |
 
 ---
 
-## Final Checklist Before Demo
+## Final Pre-Demo Checklist
 
 ```
-[ ] ollama list shows: gemma4:e2b
-[ ] /api/health shows: ollama.connected: true
-[ ] /api/health shows: ffmpeg, tesseract, faster_whisper all available: true
-[ ] /api/health shows: vector_store.available: true
-[ ] Memory space created with persona details
-[ ] Your media files uploaded (audio/video/photos/text)
-[ ] Processing completed (Setup page shows all green)
-[ ] Training data generated (60+ examples)
-[ ] Adapter training completed (Setup page shows "Adapter Ready ✓")
-[ ] Talk page responds in persona voice
-[ ] No Ollama warnings in backend terminal
-[ ] Browser at 100% zoom, notifications off
+[✅] gemma4:e2b pulled and verified (ollama list)
+[✅] PyTorch nightly cu128 — CUDA=True, GPU=RTX 5050
+[✅] Backend running — /api/health → ollama.connected: true
+[✅] FFmpeg available
+[✅] faster-whisper available
+[✅] OpenCV available
+[✅] Git initialized — 2 clean commits
+[✅] Voice conversation (STT+TTS) built in Talk page
+[✅] ElevenLabs UI in Settings page
+
+[ ] Tesseract OCR installed (Step 1)
+[ ] huggingface-cli login done (Step 2)
+[ ] Demo Memory Space created (Step 3)
+[ ] Your real media uploaded (Step 4)
+[ ] Processing completed — all pipeline steps green (Step 5)
+[ ] Memories reviewed and approved (Step 6)
+[ ] Training data generated (Step 7)
+[ ] Adapter training completed — "Adapter Ready ✓" (Step 8)
+[ ] Voice tested in Talk page — response comes back
+[ ] GitHub repo public with code pushed (Step 10)
+[ ] Browser: Chrome, 100% zoom, notifications off
 ```
 
 When all boxes checked → open DEMO.md
