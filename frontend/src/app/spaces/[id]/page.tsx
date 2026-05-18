@@ -1,8 +1,10 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { ArrowRight, CheckCircle2, MessageCircle, UploadCloud, Workflow } from "lucide-react";
 import { api } from "@/lib/api";
 import type { MemorySpace, SetupStatus } from "@/types";
 
@@ -14,70 +16,97 @@ export default function SpaceDashboard() {
 
   useEffect(() => {
     Promise.all([
-      api.getSpace(id).then(s => setSpace(s as MemorySpace)),
-      api.getSetupStatus(id).then(s => setStatus(s as SetupStatus)),
+      api.getSpace(id).then((s) => setSpace(s as MemorySpace)),
+      api.getSetupStatus(id).then((s) => setStatus(s as SetupStatus)),
     ]).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="p-10 text-text-secondary animate-pulse">Loading...</div>;
-  if (!space) return <div className="p-10 text-red-400">Space not found.</div>;
+  if (loading) return <div className="page-surface text-text-secondary animate-pulse">Loading...</div>;
+  if (!space) return <div className="page-surface text-red-300">Space not found.</div>;
 
   const pipelineDone = status?.summary.completed_steps || 0;
   const totalSteps = status?.summary.total_steps || 13;
+  const progress = Math.min(100, Math.round((pipelineDone / totalSteps) * 100));
+
+  const actions = [
+    { href: "capture", icon: UploadCloud, label: "Capture Memories", desc: "Upload audio, video, photos, and documents." },
+    { href: "setup", icon: Workflow, label: "View Setup", desc: "Track transcription, extraction, and capsule progress." },
+    { href: "talk", icon: MessageCircle, label: `Talk with ${space.presence_name}`, desc: "Start a grounded conversation from approved memories." },
+  ];
 
   return (
-    <div className="p-10 max-w-5xl">
+    <div className="page-surface">
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="mb-8">
-          <p className="text-xs text-text-muted uppercase tracking-widest mb-2">{space.relationship_type}</p>
-          <h1 className="font-serif text-5xl text-text-primary mb-1">{space.presence_name}</h1>
-          <p className="text-text-secondary text-sm">
-            {space.birth_year && `${space.birth_year}`}
-            {space.death_year && ` — ${space.death_year}`}
-            {space.still_living && " · Still living"}
-            {" · "}{space.primary_language}
-          </p>
+        <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div>
+            <p className="page-kicker">{space.relationship_type}</p>
+            <h1 className="page-title mt-2">{space.presence_name}</h1>
+            <p className="page-subtitle mt-2">
+              {space.birth_year && `${space.birth_year}`}
+              {space.death_year && ` - ${space.death_year}`}
+              {space.still_living && " - Still living"}
+              {" - "}{space.primary_language}
+            </p>
+          </div>
+          <Link href={`/spaces/${id}/talk`} className="btn-gold">
+            Open Talk <ArrowRight size={17} />
+          </Link>
         </div>
 
-        {/* Pipeline progress */}
-        <div className="card-glass p-6 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-serif text-xl text-text-primary">Processing Pipeline</h2>
-            <span className="text-sm text-text-secondary">{pipelineDone}/{totalSteps} steps complete</span>
+        <div className="card-glass mb-6 p-6">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="font-serif text-2xl text-text-primary">Processing Pipeline</h2>
+              <p className="mt-1 text-sm text-text-secondary">Memory extraction status for this space.</p>
+            </div>
+            <span className="rounded-md border border-border-subtle bg-bg-primary/50 px-3 py-2 text-sm text-text-secondary">
+              {pipelineDone}/{totalSteps}
+            </span>
           </div>
-          <div className="w-full h-1.5 rounded-full" style={{ background: "rgba(201,154,69,0.1)" }}>
-            <div className="h-full rounded-full transition-all"
-              style={{ width: `${(pipelineDone / totalSteps) * 100}%`, background: "linear-gradient(90deg, #C99A45, #38A3FF)" }} />
+          <div className="h-2 overflow-hidden rounded-full bg-bg-primary/70">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-gold-mid via-sage-mid to-blue-mid transition-all"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs">
-            <span className="text-text-secondary">Memory cards: <span className="text-gold-dim">{status?.summary.memory_cards_created || 0}</span></span>
-            <span className="text-text-muted">·</span>
-            <span className="text-text-secondary">Approved: <span className="text-gold-dim">{status?.summary.approved_cards || 0}</span></span>
-            <span className="text-text-muted">·</span>
-            <span className="text-text-secondary">Persona capsule: <span className={status?.summary.has_persona_capsule ? "text-emerald-400" : "text-text-muted"}>{status?.summary.has_persona_capsule ? "Ready" : "Not yet"}</span></span>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {[
+              ["Memory cards", status?.summary.memory_cards_created || 0],
+              ["Approved", status?.summary.approved_cards || 0],
+              ["Persona capsule", status?.summary.has_persona_capsule ? "Ready" : "Pending"],
+            ].map(([label, value]) => (
+              <div key={label} className="panel-muted p-4">
+                <p className="text-xs text-text-muted">{label}</p>
+                <p className="mt-1 font-serif text-2xl text-gold-bright">{value}</p>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Quick actions */}
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { href: `capture`, icon: "⊕", label: "Capture Memories", desc: "Upload audio, video, photos, documents" },
-            { href: `setup`, icon: "◎", label: "View Setup", desc: "Track processing pipeline progress" },
-            { href: `talk`, icon: "◉", label: `Talk with ${space.presence_name}`, desc: "Start a presence conversation" },
-          ].map(a => (
-            <Link key={a.href} href={`/spaces/${id}/${a.href}`}>
-              <motion.div whileHover={{ scale: 1.02 }} className="card-glass p-6 cursor-pointer h-full">
-                <span className="text-2xl text-gold-dim mb-3 block">{a.icon}</span>
-                <h3 className="font-serif text-lg text-text-primary mb-1">{a.label}</h3>
-                <p className="text-xs text-text-secondary">{a.desc}</p>
-              </motion.div>
-            </Link>
-          ))}
+        <div className="grid gap-4 md:grid-cols-3">
+          {actions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link key={action.href} href={`/spaces/${id}/${action.href}`}>
+                <motion.div whileHover={{ y: -2 }} className="card-glass h-full p-6">
+                  <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-bg-primary/60 text-gold-bright">
+                    <Icon size={19} />
+                  </div>
+                  <h3 className="font-serif text-xl text-text-primary">{action.label}</h3>
+                  <p className="mt-2 text-sm leading-6 text-text-secondary">{action.desc}</p>
+                </motion.div>
+              </Link>
+            );
+          })}
         </div>
 
         {space.description && (
-          <div className="mt-6 card-glass p-6">
-            <p className="text-sm text-text-secondary italic leading-relaxed">"{space.description}"</p>
+          <div className="card-glass mt-6 p-6">
+            <div className="mb-3 flex items-center gap-2 text-sm text-sage-bright">
+              <CheckCircle2 size={16} />
+              Profile note
+            </div>
+            <p className="text-sm italic leading-7 text-text-secondary">&quot;{space.description}&quot;</p>
           </div>
         )}
       </motion.div>

@@ -14,6 +14,9 @@ if not exist venv\Scripts\python.exe (
 
 call venv\Scripts\activate.bat
 
+rem Let backend\.env control DEBUG; avoids global DEBUG=release breaking Pydantic.
+set DEBUG=
+
 echo  Checking Ollama...
 ollama list 2>nul | findstr "gemma4" >nul
 if errorlevel 1 (

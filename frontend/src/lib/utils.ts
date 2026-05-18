@@ -13,9 +13,9 @@ export function formatFileSize(bytes: number): string {
 }
 
 export function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
 export function trustChipLabel(chip: TrustChip): string {
@@ -44,10 +44,10 @@ export function trustChipClass(chip: TrustChip): string {
 
 export function stepStatusColor(status: string): string {
   switch (status) {
-    case "done": return "text-emerald-400";
-    case "running": return "text-blue-400";
-    case "error": return "text-red-400";
-    case "tool_missing": return "text-amber-400";
+    case "done": return "text-emerald-300";
+    case "running": return "text-blue-bright";
+    case "error": return "text-red-300";
+    case "tool_missing": return "text-amber-300";
     case "pending": return "text-text-secondary";
     default: return "text-text-muted";
   }
@@ -55,11 +55,11 @@ export function stepStatusColor(status: string): string {
 
 export function stepStatusIcon(status: string): string {
   switch (status) {
-    case "done": return "✓";
-    case "running": return "●";
-    case "error": return "✗";
-    case "tool_missing": return "⚠";
-    case "pending": return "○";
-    default: return "—";
+    case "done": return "OK";
+    case "running": return "...";
+    case "error": return "X";
+    case "tool_missing": return "!";
+    case "pending": return "-";
+    default: return "-";
   }
 }

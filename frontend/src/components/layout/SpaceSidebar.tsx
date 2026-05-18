@@ -1,17 +1,30 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Archive,
+  Boxes,
+  CheckSquare,
+  Gauge,
+  MessageCircle,
+  Plus,
+  Settings,
+  Sparkles,
+  Timeline,
+  UploadCloud,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = (id: string) => [
-  { href: `/spaces/${id}`, icon: "◈", label: "Dashboard" },
-  { href: `/spaces/${id}/capture`, icon: "⊕", label: "Capture" },
-  { href: `/spaces/${id}/setup`, icon: "◎", label: "Setup" },
-  { href: `/spaces/${id}/review`, icon: "◻", label: "Review Memories" },
-  { href: `/spaces/${id}/timeline`, icon: "⊣", label: "Timeline" },
-  { href: `/spaces/${id}/talk`, icon: "◉", label: "Talk with Them" },
-  { href: `/spaces/${id}/capsules`, icon: "◌", label: "Capsules" },
-  { href: `/spaces/${id}/settings`, icon: "⊙", label: "Settings" },
+  { href: `/spaces/${id}`, icon: Gauge, label: "Dashboard" },
+  { href: `/spaces/${id}/capture`, icon: UploadCloud, label: "Capture" },
+  { href: `/spaces/${id}/setup`, icon: Boxes, label: "Setup" },
+  { href: `/spaces/${id}/review`, icon: CheckSquare, label: "Review Memories" },
+  { href: `/spaces/${id}/timeline`, icon: Timeline, label: "Timeline" },
+  { href: `/spaces/${id}/talk`, icon: MessageCircle, label: "Talk" },
+  { href: `/spaces/${id}/capsules`, icon: Archive, label: "Capsules" },
+  { href: `/spaces/${id}/settings`, icon: Settings, label: "Settings" },
 ];
 
 interface SpaceSidebarProps {
@@ -23,39 +36,36 @@ export default function SpaceSidebar({ spaceId, presenceName }: SpaceSidebarProp
   const pathname = usePathname();
 
   return (
-    <aside className="w-60 flex-shrink-0 flex flex-col"
-      style={{ background: "#0B0D12", borderRight: "1px solid rgba(201,154,69,0.1)", minHeight: "100vh" }}>
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 border-b"
-        style={{ borderColor: "rgba(201,154,69,0.1)" }}>
-        <span className="text-gold-dim">✦</span>
-        <span className="font-serif text-base text-text-primary">Afterlight</span>
+    <aside className="flex min-h-screen w-64 flex-shrink-0 flex-col border-r border-border-subtle bg-bg-primary/92">
+      <Link href="/" className="flex items-center gap-3 border-b border-border-subtle px-5 py-5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-gold bg-gold-glow text-gold-bright">
+          <Sparkles size={17} />
+        </span>
+        <span className="font-serif text-lg text-text-primary">Afterlight</span>
       </Link>
 
-      {/* Space name */}
-      <div className="px-5 py-4 border-b" style={{ borderColor: "rgba(201,154,69,0.08)" }}>
-        <p className="text-xs text-text-muted uppercase tracking-widest mb-1">Memory Space</p>
-        <p className="font-serif text-lg text-gold-dim truncate">{presenceName}</p>
+      <div className="border-b border-border-subtle px-5 py-5">
+        <p className="page-kicker">Memory Space</p>
+        <p className="mt-2 truncate font-serif text-2xl text-gold-bright">{presenceName}</p>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 space-y-1 px-3 py-4">
         {navItems(spaceId).map((item) => {
+          const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href}
-              className={cn("sidebar-item", isActive && "active")}>
-              <span className="text-sm w-4 text-center">{item.icon}</span>
+            <Link key={item.href} href={item.href} className={cn("sidebar-item", isActive && "active")}>
+              <Icon size={17} />
               <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t" style={{ borderColor: "rgba(201,154,69,0.08)" }}>
-        <Link href="/create" className="text-xs text-text-muted hover:text-gold-dim transition-colors">
-          + New Memory Space
+      <div className="border-t border-border-subtle px-4 py-4">
+        <Link href="/create" className="btn-ghost w-full justify-start px-3 py-2 text-xs">
+          <Plus size={15} />
+          New Memory Space
         </Link>
       </div>
     </aside>

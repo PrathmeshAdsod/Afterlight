@@ -27,6 +27,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // ─── Health ───────────────────────────────────────────────────────────────────
 export const api = {
   health: () => request("/api/health"),
+  getElevenLabsStatus: () => request("/api/app-settings/elevenlabs"),
+  saveElevenLabsKey: (apiKey: string) =>
+    request("/api/app-settings/elevenlabs", { method: "POST", body: JSON.stringify({ api_key: apiKey }) }),
+  deleteElevenLabsKey: () =>
+    request("/api/app-settings/elevenlabs", { method: "DELETE" }),
 
   // ─── Memory Spaces ──────────────────────────────────────────────────────────
   createSpace: (data: {

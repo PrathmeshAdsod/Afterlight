@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { ArrowLeft, ArrowRight, Check, FileCheck2, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api";
-import { Suspense } from "react";
 
 const CHECKBOXES = [
   { key: "is_authorized_steward", label: "I am an authorized memory steward for this person." },
@@ -24,9 +25,8 @@ function AgreementForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const allChecked = CHECKBOXES.every(c => checked[c.key]);
-
-  const toggle = (key: string) => setChecked(p => ({ ...p, [key]: !p[key] }));
+  const allChecked = CHECKBOXES.every((item) => checked[item.key]);
+  const toggle = (key: string) => setChecked((previous) => ({ ...previous, [key]: !previous[key] }));
 
   const handleSubmit = async () => {
     if (!allChecked || !spaceId) return;
@@ -51,79 +51,107 @@ function AgreementForm() {
 
   if (!spaceId) {
     return (
-      <div className="text-center py-20 text-text-secondary">
-        No memory space specified. <Link href="/create" className="text-gold-dim underline">Create one first.</Link>
+      <div className="relative z-10 mx-auto max-w-lg py-24 text-center text-text-secondary">
+        No memory space specified.{" "}
+        <Link href="/create" className="text-gold-bright underline">
+          Create one first.
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-20" style={{ background: "#05070B" }}>
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] rounded-full opacity-8"
-          style={{ background: "radial-gradient(circle, #C99A45 0%, transparent 70%)", filter: "blur(100px)" }} />
-      </div>
+    <div className="relative z-10 mx-auto max-w-5xl">
+      <Link href="/create" className="inline-flex items-center gap-2 text-sm text-text-muted transition-colors hover:text-text-primary">
+        <ArrowLeft size={16} />
+        Back to details
+      </Link>
 
-      <motion.div initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-        className="relative z-10 w-full max-w-lg">
-
-        <div className="text-center mb-10">
-          <Link href="/" className="inline-flex items-center gap-2 text-gold-dim mb-8">
-            <span>✦</span><span className="font-serif text-lg">Afterlight</span>
-          </Link>
-          <h1 className="font-serif text-4xl text-text-primary mb-3">Memory Steward Agreement</h1>
-          <p className="text-text-secondary text-sm max-w-sm mx-auto">
-            Please read and accept each commitment before we begin preserving this presence.
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55 }}
+        className="mt-10 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]"
+      >
+        <section className="rounded-lg border border-border-subtle bg-surface-1/55 p-8">
+          <span className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg border border-border-gold bg-gold-glow text-gold-bright">
+            <FileCheck2 size={22} />
+          </span>
+          <p className="page-kicker">Steward Agreement</p>
+          <h1 className="mt-3 font-serif text-5xl text-text-primary">Care before capture.</h1>
+          <p className="mt-5 text-sm leading-7 text-text-secondary">
+            Afterlight preserves memories from evidence you provide and approve. These commitments keep the workspace honest, respectful, and reviewable.
           </p>
-        </div>
 
-        <div className="card-glass p-8 mb-4">
-          <div className="p-4 rounded-lg mb-6 text-sm text-text-secondary"
-            style={{ background: "rgba(201,154,69,0.05)", border: "1px solid rgba(201,154,69,0.15)" }}>
-            <p className="font-medium text-gold-dim mb-2">What this creates</p>
-            <p>Afterlight creates a <strong className="text-text-primary">preserved presence</strong> from approved memories. It does not recreate consciousness or guarantee unsupported facts.</p>
+          <div className="mt-10 space-y-4">
+            <div className="panel-muted flex gap-3 p-4">
+              <ShieldCheck size={18} className="mt-0.5 flex-shrink-0 text-sage-mid" />
+              <p className="text-sm leading-6 text-text-secondary">
+                Replies should be grounded in approved memories, not treated as a replacement for the person.
+              </p>
+            </div>
+            <div className="panel-muted flex gap-3 p-4">
+              <LockKeyhole size={18} className="mt-0.5 flex-shrink-0 text-blue-mid" />
+              <p className="text-sm leading-6 text-text-secondary">
+                The adapter learns tone and phrasing while source facts remain visible in the memory graph.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="card-glass p-7 md:p-8">
+            <div className="mb-6 rounded-lg border border-border-gold bg-gold-glow p-4">
+              <p className="mb-2 text-sm font-semibold text-gold-bright">What this creates</p>
+              <p className="text-sm leading-6 text-text-secondary">
+                A preserved presence based on approved memories. It does not recreate consciousness or guarantee unsupported facts.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {CHECKBOXES.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggle(key)}
+                  className="flex w-full items-start gap-4 rounded-lg border border-border-subtle bg-bg-primary/35 p-4 text-left transition-colors hover:border-border-gold"
+                >
+                  <span className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border ${checked[key] ? "border-gold-mid bg-gold-mid text-bg-primary" : "border-border-gold text-transparent"}`}>
+                    <Check size={14} />
+                  </span>
+                  <span className="text-sm leading-6 text-text-secondary">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-4">
-            {CHECKBOXES.map(({ key, label }) => (
-              <label key={key} className="flex items-start gap-4 cursor-pointer group" onClick={() => toggle(key)}>
-                <div className={`mt-0.5 w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-all ${checked[key] ? "bg-gold-dim border-gold-dim" : "border-border-gold group-hover:border-gold-dim"}`}>
-                  {checked[key] && <span className="text-bg-primary text-xs font-bold">✓</span>}
-                </div>
-                <span className="text-sm text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors">
-                  {label}
-                </span>
-              </label>
-            ))}
-          </div>
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-400/25 bg-red-400/10 p-3 text-sm text-red-200">
+              {error}
+            </div>
+          )}
 
-          <div className="mt-6 p-4 rounded-lg text-xs text-text-muted"
-            style={{ background: "rgba(22,119,255,0.05)", border: "1px solid rgba(56,163,255,0.1)" }}>
-            <p className="font-medium text-blue-mid mb-1">About the persona adapter</p>
-            <p>The persona adapter learns tone, phrases, values, and response behaviour. Facts remain stored in the reviewable memory graph and source vault — never hidden inside the model.</p>
-          </div>
-        </div>
-
-        {error && (
-          <div className="text-red-400 text-sm p-3 rounded-lg mb-4"
-            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
-            {error}
-          </div>
-        )}
-
-        <button onClick={handleSubmit} disabled={!allChecked || loading}
-          className={`w-full py-4 rounded-lg text-base font-semibold transition-all flex items-center justify-center gap-2 ${
-            allChecked ? "btn-gold" : "opacity-40 cursor-not-allowed"
-          }`}
-          style={{ background: allChecked ? undefined : "rgba(201,154,69,0.1)", color: allChecked ? undefined : "#B8AA96",
-            border: allChecked ? undefined : "1px solid rgba(201,154,69,0.2)" }}>
-          {loading ? "Signing..." : allChecked ? <><span>✓</span> I agree — Begin Capturing Memories</> : `Accept all ${CHECKBOXES.length} items to continue`}
-        </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!allChecked || loading}
+            className="btn-gold mt-4 w-full py-3.5 text-base"
+          >
+            {loading ? "Signing..." : allChecked ? "I agree. Begin capturing memories" : `Accept all ${CHECKBOXES.length} items to continue`}
+            {allChecked && !loading && <ArrowRight size={18} />}
+          </button>
+        </section>
       </motion.div>
     </div>
   );
 }
 
 export default function AgreementPage() {
-  return <Suspense><AgreementForm /></Suspense>;
+  return (
+    <div className="relative min-h-screen overflow-hidden app-shell px-5 py-10">
+      <div className="archive-grid" />
+      <Suspense>
+        <AgreementForm />
+      </Suspense>
+    </div>
+  );
 }

@@ -36,7 +36,19 @@ class AgreementRequest(BaseModel):
     allows_persona_adapter: bool
 
 
+from sqlalchemy import inspect
+
 def space_to_dict(space: MemorySpace) -> dict:
+    # Safely check if agreement relationship is loaded without triggering lazy load
+    try:
+        insp = inspect(space)
+        if "agreement" not in insp.unloaded:
+            has_agreement = space.agreement is not None
+        else:
+            has_agreement = False
+    except Exception:
+        has_agreement = False
+
     return {
         "id": space.id,
         "presence_name": space.presence_name,
@@ -47,7 +59,7 @@ def space_to_dict(space: MemorySpace) -> dict:
         "primary_language": space.primary_language,
         "description": space.description,
         "created_at": space.created_at.isoformat(),
-        "has_agreement": space.agreement is not None,
+        "has_agreement": has_agreement,
     }
 
 
@@ -71,9 +83,15 @@ async def create_space(req: CreateSpaceRequest, db: AsyncSession = Depends(get_d
     return space_to_dict(space)
 
 
+from sqlalchemy.orm import selectinload
+
 @router.get("")
 async def list_spaces(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(MemorySpace).order_by(MemorySpace.created_at.desc()))
+    result = await db.execute(
+        select(MemorySpace)
+        .options(selectinload(MemorySpace.agreement))
+        .order_by(MemorySpace.created_at.desc())
+    )
     spaces = result.scalars().all()
     return [space_to_dict(s) for s in spaces]
 

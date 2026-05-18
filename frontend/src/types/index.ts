@@ -1,4 +1,4 @@
-// ─── API Types ────────────────────────────────────────────────────────────────
+// API Types
 
 export interface MemorySpace {
   id: string;
@@ -33,6 +33,7 @@ export interface MemoryCard {
   source_end_time?: number;
   people_mentioned: string[];
   places_mentioned: string[];
+  places?: string[];
   themes: string[];
   values: string[];
   tone_signals: string[];

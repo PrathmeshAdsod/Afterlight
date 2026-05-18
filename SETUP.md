@@ -262,14 +262,14 @@ start_frontend.bat
 [✅] gemma4:e2b pulled and verified (ollama list)
 [✅] PyTorch nightly cu128 — CUDA=True, GPU=RTX 5050
 [✅] Backend running — /api/health → ollama.connected: true
-[✅] FFmpeg available
-[✅] faster-whisper available
-[✅] OpenCV available
-[✅] Git initialized — 2 clean commits
+[✅] FFmpeg available (v8.1.1)
+[✅] Tesseract OCR installed (v5.4, in PATH + .env)
+[✅] faster-whisper available (GPU float16)
+[✅] OpenCV available (v4.13)
+[✅] Git initialized — clean commits
 [✅] Voice conversation (STT+TTS) built in Talk page
 [✅] ElevenLabs UI in Settings page
 
-[ ] Tesseract OCR installed (Step 1)
 [ ] huggingface-cli login done (Step 2)
 [ ] Demo Memory Space created (Step 3)
 [ ] Your real media uploaded (Step 4)

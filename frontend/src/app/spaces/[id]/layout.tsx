@@ -14,9 +14,9 @@ export default function SpaceLayout({ children }: { children: React.ReactNode })
   }, [id]);
 
   return (
-    <div className="flex min-h-screen" style={{ background: "#05070B" }}>
+    <div className="flex min-h-screen app-shell">
       <SpaceSidebar spaceId={id} presenceName={space?.presence_name || "Loading..."} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="relative z-10 flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }
